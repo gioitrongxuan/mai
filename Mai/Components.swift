@@ -141,6 +141,39 @@ struct PaperPlane: View {
     }
 }
 
+// MARK: - Flying sparkles (letter send animation)
+
+struct FlyingSparkles: View {
+    var accent: Color
+    var glow: Color
+    @State private var animate = false
+
+    private let particles: [(x: CGFloat, size: CGFloat, delay: Double)] = [
+        (-38, 7, 0.00), (42, 5, 0.06), (-18, 6, 0.12),
+        (28, 5, 0.04), (-52, 4, 0.09), (16, 7, 0.15),
+    ]
+
+    var body: some View {
+        ZStack {
+            ForEach(particles.indices, id: \.self) { i in
+                let p = particles[i]
+                Circle()
+                    .fill(accent.opacity(0.9))
+                    .frame(width: p.size, height: p.size)
+                    .blur(radius: 1.5)
+                    .shadow(color: glow, radius: 6)
+                    .offset(x: p.x, y: animate ? -280 - CGFloat(i * 35) : 0)
+                    .opacity(animate ? 0 : 1)
+                    .animation(
+                        .easeOut(duration: 0.75).delay(p.delay),
+                        value: animate
+                    )
+            }
+        }
+        .onAppear { animate = true }
+    }
+}
+
 // MARK: - Envelope
 
 struct EnvelopeView: View {

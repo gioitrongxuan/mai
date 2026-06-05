@@ -8,6 +8,7 @@ struct ComposeView: View {
 
     @State private var step = 0
     @State private var phase: Phase = .form
+    @State private var flyAnimate = false
     @State private var toSelf = true
     @State private var otherName = ""
     @State private var title = ""
@@ -16,7 +17,7 @@ struct ComposeView: View {
     @State private var whenKind: WhenKind = .year
     @State private var customDate = ""
 
-    enum Phase { case form, sealing, done }
+    enum Phase { case form, sealing, flying, done }
     enum AttachKind: String, CaseIterable, Hashable {
         case photo = "photo", voice = "voice", file = "file"
         var label: String { switch self { case .photo: "Ảnh"; case .voice: "Ghi âm"; case .file: "Tệp" } }
@@ -70,6 +71,11 @@ struct ComposeView: View {
         VStack(spacing: 0) {
             ZStack {
                 EnvelopeView(width: 250, open: false, broken: false, seal: sealChar)
+                    .offset(y: flyAnimate ? -700 : 0)
+                    .scaleEffect(flyAnimate ? 0.1 : 1)
+                    .opacity(flyAnimate ? 0 : 1)
+                    .rotationEffect(.degrees(flyAnimate ? 15 : 0))
+                    .animation(.easeIn(duration: 1.0), value: flyAnimate)
                 if phase == .sealing {
                     WaxSeal(size: 64, label: sealChar)
                         .offset(y: -10)
@@ -77,6 +83,10 @@ struct ComposeView: View {
                             insertion: .move(edge: .top).combined(with: .opacity),
                             removal: .opacity))
                         .animation(.spring(response: 0.85, dampingFraction: 0.6), value: phase)
+                }
+                // Sparkle trail during fly-away
+                if phase == .flying {
+                    FlyingSparkles(accent: c.accent, glow: c.glow)
                 }
             }
             .padding(.top, 80)
@@ -112,6 +122,12 @@ struct ComposeView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 30)
                 .transition(.opacity)
+            } else if phase == .flying {
+                Text("Đang bay tới tương lai…")
+                    .font(.maiBody)
+                    .foregroundColor(c.muted)
+                    .padding(.top, 36)
+                    .transition(.opacity)
             } else {
                 Text("Đang niêm phong…")
                     .font(.maiBody)
@@ -121,8 +137,11 @@ struct ComposeView: View {
             Spacer()
         }
         .onAppear {
-            if phase == .sealing {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            guard phase == .sealing else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                withAnimation(.easeInOut(duration: 0.3)) { phase = .flying }
+                flyAnimate = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) {
                     withAnimation { phase = .done }
                 }
             }
