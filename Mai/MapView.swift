@@ -41,16 +41,14 @@ struct MapView: View {
     @State private var newTitle = ""
     @State private var newAge = ""
     @State private var picked: Int? = nil
-    @State private var mapScrollWidth: CGFloat = 300
 
     private var years: Int { store.profile.lifespanYears }
     private var livedCount: Int { unit.lived(birthISO: store.profile.birthISO, now: now) }
-    private var canvasHPad: CGFloat {
-        let step = unit.cell + unit.gap
-        let w = CGFloat(unit.cols) * step - unit.gap
-        return max(0, (mapScrollWidth - w) / 2)
-    }
     private var total: Int { years * unit.perYear }
+    private var canvasRowHeight: CGFloat {
+        let rows = Int(ceil(Double(total) / Double(unit.cols)))
+        return CGFloat(rows) * (unit.cell + unit.gap) - unit.gap
+    }
     private var pct: Double { total > 0 ? min(100, Double(livedCount) / Double(total) * 100) : 0 }
 
     private var marks: [Int: LifeCanvas.MarkKind] {
@@ -175,23 +173,23 @@ struct MapView: View {
                     .padding(.top, 14)
 
                     // Canvas grid
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        LifeCanvas(
-                            lived: livedCount, total: total,
-                            cols: unit.cols, cell: unit.cell, gap: unit.gap,
-                            marks: marks, accent: accent, theme: theme,
-                            onPick: { picked = $0 }
-                        )
-                        .padding(.vertical, 2)
-                        .padding(.horizontal, canvasHPad)
-                    }
-                    .padding(.top, 22)
-                    .background(
-                        GeometryReader { geo in
-                            Color.clear.preference(key: MapScrollWidthKey.self, value: geo.size.width)
+                    GeometryReader { geo in
+                        let step = unit.cell + unit.gap
+                        let cw = CGFloat(unit.cols) * step - unit.gap
+                        let hPad = max(0, (geo.size.width - cw) / 2)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            LifeCanvas(
+                                lived: livedCount, total: total,
+                                cols: unit.cols, cell: unit.cell, gap: unit.gap,
+                                marks: marks, accent: accent, theme: theme,
+                                onPick: { picked = $0 }
+                            )
+                            .padding(.vertical, 2)
+                            .padding(.horizontal, hPad)
                         }
-                    )
-                    .onPreferenceChange(MapScrollWidthKey.self) { mapScrollWidth = $0 }
+                    }
+                    .frame(height: canvasRowHeight + 4)
+                    .padding(.top, 22)
 
                     Text("chạm vào một chấm để xem mốc thời gian")
                         .font(.system(size: 11.5))
@@ -321,11 +319,6 @@ struct MapView: View {
         store.profile.goals.removeAll { $0.id == id }
         store.save()
     }
-}
-
-private struct MapScrollWidthKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }
 
 // MARK: - Goal row
